@@ -1641,6 +1641,8 @@
   "com_ui_tool_name_web_search": "Web Search",
   "com_ui_tools": "Tools",
   "com_ui_tools_and_actions": "Tools and Actions",
+  "com_ui_tools_count": "{{count}} tools",
+  "com_ui_tools_count_one": "{{count}} tool",
   "com_ui_tools_marketplace": "Marketplace",
   "com_ui_tools_marketplace_search": "Search the marketplace…",
   "com_ui_tools_section_title": "Tools",

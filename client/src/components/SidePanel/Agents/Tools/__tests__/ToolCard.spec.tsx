@@ -4,7 +4,13 @@ import ToolCard from '../ToolCard';
 import type { AgentItem } from '../items/types';
 
 jest.mock('~/hooks', () => ({
-  useLocalize: () => (key: string) => key,
+  useLocalize:
+    () =>
+    (key: string, options?: Record<string, unknown>): string => {
+      if (!options) return key;
+      const parts = Object.entries(options).map(([name, value]) => `${name}=${String(value)}`);
+      return `${key}[${parts.join(',')}]`;
+    },
 }));
 
 const skill: AgentItem = {
@@ -61,6 +67,6 @@ describe('ToolCard', () => {
       toolCount: 14,
     };
     render(<ToolCard item={mcp} selected={false} onToggle={jest.fn()} />);
-    expect(screen.getByText(/14/)).toBeInTheDocument();
+    expect(screen.getByText('com_ui_tools_count[count=14]')).toBeInTheDocument();
   });
 });

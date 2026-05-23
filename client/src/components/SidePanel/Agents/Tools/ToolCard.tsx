@@ -54,8 +54,9 @@ export default function ToolCard({ item, selected, onToggle }: ToolCardProps) {
         )}
         {item.kind === 'mcp' && item.toolCount > 0 && (
           <span className="inline-flex items-center gap-1 rounded-full bg-surface-tertiary px-2 py-0.5 text-[10px] text-text-tertiary">
-            {/* eslint-disable-next-line i18next/no-literal-string */}
-            {item.toolCount} tools
+            {localize(item.toolCount === 1 ? 'com_ui_tools_count_one' : 'com_ui_tools_count', {
+              count: item.toolCount,
+            })}
           </span>
         )}
         <span
