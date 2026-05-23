@@ -4,7 +4,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { AgentForm } from '~/common';
 import type { AgentItem } from './items/types';
-import ToolChip from './ToolChip';
+import ToolRow from './ToolRow';
 import ToolsMarketplaceDialog from './ToolsMarketplaceDialog';
 import { buildCatalog } from './items/catalog';
 import { deriveSelectedItems } from './items/selectors';
@@ -170,10 +170,10 @@ export default function ToolsSection({ agentId }: Props) {
           </span>
         </button>
       ) : (
-        <ul className="flex flex-wrap gap-1.5">
+        <ul className="flex flex-col gap-1.5">
           {selected.map((item) => (
             <li key={`${item.kind}:${item.id}`}>
-              <ToolChip item={item} onClick={() => setOpen(true)} onRemove={handleQuickRemove} />
+              <ToolRow item={item} onClick={() => setOpen(true)} onRemove={handleQuickRemove} />
             </li>
           ))}
         </ul>
