@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Globe } from 'lucide-react';
 import { Spinner } from '@librechat/client';
 import { useWatch, useFormContext } from 'react-hook-form';
@@ -12,12 +13,15 @@ import type { AgentForm, AgentPanelProps } from '~/common';
 import { useLocalize, useAuthContext, useHasAccess, useResourcePermissions } from '~/hooks';
 import { GenericGrantAccessDialog } from '~/components/Sharing';
 import { useUpdateAgentMutation } from '~/data-provider';
+import ToolsMarketplaceDialog from './Tools/ToolsMarketplaceDialog';
 import AdvancedButton from './Advanced/AdvancedButton';
 import VersionButton from './Version/VersionButton';
 import DuplicateAgent from './DuplicateAgent';
 import AdminSettings from './AdminSettings';
 import DeleteButton from './DeleteButton';
 import { Panel } from '~/common';
+
+const DEV_MARKETPLACE_LABEL = 'Open new marketplace (dev)';
 
 export default function AgentFooter({
   activePanel,
@@ -74,6 +78,8 @@ export default function AgentFooter({
   );
 
   const showButtons = activePanel === Panel.builder;
+  const isDev = (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV === true;
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
 
   return (
     <div className="mb-1 flex w-full flex-col gap-2">
@@ -86,6 +92,22 @@ export default function AgentFooter({
             <div aria-hidden="true" />
           )}
         </div>
+      )}
+      {showButtons && isDev && (
+        <button
+          type="button"
+          onClick={() => setMarketplaceOpen(true)}
+          className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-light bg-transparent px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+        >
+          {DEV_MARKETPLACE_LABEL}
+        </button>
+      )}
+      {marketplaceOpen && (
+        <ToolsMarketplaceDialog
+          open={marketplaceOpen}
+          onOpenChange={setMarketplaceOpen}
+          agentId={agent_id ?? ''}
+        />
       )}
       {user?.role === SystemRoles.ADMIN && showButtons && <AdminSettings />}
       {/* Context Button */}
