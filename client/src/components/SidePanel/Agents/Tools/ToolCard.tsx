@@ -146,15 +146,8 @@ export default function ToolCard({ item, selected, onToggle, onConfigure }: Tool
             {isNative ? localize('com_ui_tools_native_short') : kindLabel}
           </p>
         )}
-        <div className="mt-auto flex w-full items-center gap-1.5">
-          {item.kind === 'mcp' && item.toolCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-tertiary px-2 py-0.5 text-[10px] text-text-tertiary">
-              {localize(item.toolCount === 1 ? 'com_ui_tools_count_one' : 'com_ui_tools_count', {
-                count: item.toolCount,
-              })}
-            </span>
-          )}
-          {item.kind === 'action' && item.endpointCount > 0 && (
+        {item.kind === 'action' && item.endpointCount > 0 && (
+          <div className="mt-auto flex w-full items-center gap-1.5">
             <span className="inline-flex items-center gap-1 rounded-full bg-surface-tertiary px-2 py-0.5 text-[10px] text-text-tertiary">
               {localize(
                 item.endpointCount === 1
@@ -163,8 +156,8 @@ export default function ToolCard({ item, selected, onToggle, onConfigure }: Tool
                 { count: item.endpointCount },
               )}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </button>
       {canConfigure && (
         <button

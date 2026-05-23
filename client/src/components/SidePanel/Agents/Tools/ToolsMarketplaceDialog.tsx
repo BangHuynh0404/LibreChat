@@ -236,10 +236,10 @@ export default function ToolsMarketplaceDialog({
   return (
     <OGDialog open={open} onOpenChange={onOpenChange}>
       <OGDialogContent
-        className="w-11/12 max-w-[1024px] overflow-hidden rounded-2xl border-border-medium p-0 shadow-xl md:max-h-[85vh]"
+        className="w-11/12 max-w-[1200px] overflow-hidden rounded-2xl border-border-medium p-0 shadow-xl md:max-h-[92vh]"
         showCloseButton={false}
       >
-        <div className="flex h-[80vh] max-h-[720px]">
+        <div className="flex h-[88vh] max-h-[840px]">
           <MarketplaceSidebar
             activeView={view}
             activeKind={kind}

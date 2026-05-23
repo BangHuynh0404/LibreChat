@@ -56,7 +56,7 @@ describe('ToolCard', () => {
     expect(screen.getByLabelText('com_ui_tools_native')).toBeInTheDocument();
   });
 
-  test('renders MCP tool-count pill when toolCount > 0', () => {
+  test('does not render the tool-count pill for MCP cards', () => {
     const mcp: AgentItem = {
       kind: 'mcp',
       id: 'everything',
@@ -67,6 +67,6 @@ describe('ToolCard', () => {
       toolCount: 14,
     };
     render(<ToolCard item={mcp} selected={false} onToggle={jest.fn()} />);
-    expect(screen.getByText('com_ui_tools_count[count=14]')).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_tools_count[count=14]')).not.toBeInTheDocument();
   });
 });
