@@ -5,6 +5,7 @@ import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { AgentForm } from '~/common';
 import type { AgentItem } from './items/types';
 import ToolRow from './ToolRow';
+import ToolInfoDialog from './ToolInfoDialog';
 import ToolsMarketplaceDialog from './ToolsMarketplaceDialog';
 import { buildCatalog } from './items/catalog';
 import { deriveSelectedItems } from './items/selectors';
@@ -20,6 +21,7 @@ interface Props {
 export default function ToolsSection({ agentId }: Props) {
   const localize = useLocalize();
   const [open, setOpen] = useState(false);
+  const [infoItem, setInfoItem] = useState<AgentItem | null>(null);
   const { control, getValues, setValue } = useFormContext<AgentForm>();
   const { agentsConfig, regularTools, mcpServersMap, actions } = useAgentPanelContext();
 
@@ -173,12 +175,18 @@ export default function ToolsSection({ agentId }: Props) {
         <ul className="flex flex-col gap-1.5">
           {selected.map((item) => (
             <li key={`${item.kind}:${item.id}`}>
-              <ToolRow item={item} onClick={() => setOpen(true)} onRemove={handleQuickRemove} />
+              <ToolRow
+                item={item}
+                onClick={() => setOpen(true)}
+                onInfo={setInfoItem}
+                onRemove={handleQuickRemove}
+              />
             </li>
           ))}
         </ul>
       )}
       {open && <ToolsMarketplaceDialog open={open} onOpenChange={setOpen} agentId={agentId} />}
+      <ToolInfoDialog item={infoItem} onClose={() => setInfoItem(null)} />
     </div>
   );
 }
