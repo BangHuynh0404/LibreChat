@@ -42,17 +42,42 @@ jest.mock('~/hooks', () => ({
   useCategories: () => ({ categories: [] }),
 }));
 
+jest.mock('@ariakit/react/menu', () => ({
+  MenuButton: ({ render }: { render: React.ReactNode }) => render,
+}));
+
 jest.mock('~/data-provider', () => ({
   useListSkillsQuery: () => ({ data: { skills: [] } }),
 }));
 
+jest.mock('react-router-dom', () => ({
+  useNavigate: () => jest.fn(),
+}));
+
 jest.mock('@librechat/client', () => {
   const React = jest.requireActual('react');
+  const passthrough =
+    (tag: string) =>
+    ({ children, asChild, ...rest }: any) =>
+      React.createElement(asChild ? React.Fragment : tag, asChild ? null : rest, children);
   return {
+    Button: ({ children, onClick, asChild, ...rest }: any) =>
+      asChild
+        ? React.createElement(React.Fragment, null, children)
+        : React.createElement('button', { onClick, type: 'button', ...rest }, children),
+    DropdownPopup: ({ trigger }: { trigger: React.ReactNode }) =>
+      React.createElement('div', null, trigger),
     OGDialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
       open ? React.createElement('div', null, children) : null,
-    OGDialogContent: ({ children }: { children: React.ReactNode }) =>
-      React.createElement('div', null, children),
+    OGDialogContent: passthrough('div'),
+    OGDialogHeader: passthrough('div'),
+    OGDialogTitle: passthrough('h2'),
+    OGDialogDescription: passthrough('p'),
+    OGDialogClose: ({ children, asChild }: any) =>
+      asChild
+        ? React.createElement(React.Fragment, null, children)
+        : React.createElement('button', { type: 'button' }, children),
+    useToastContext: () => ({ showToast: jest.fn() }),
   };
 });
 

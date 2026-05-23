@@ -1,5 +1,6 @@
+import { Trash2 } from 'lucide-react';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { Switch } from '@librechat/client';
+import { Button, Switch } from '@librechat/client';
 import { ArtifactModes, AgentCapabilities } from 'librechat-data-provider';
 import type { AgentForm } from '~/common';
 import type { BuiltinId } from '../items/types';
@@ -126,15 +127,14 @@ export default function BuiltinDetail({ builtinId, onRemove }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-5">
       {body}
-      <button
-        type="button"
-        onClick={onRemove}
-        className="self-start rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-500 transition-colors hover:bg-red-500/10"
-      >
-        {localize('com_ui_tools_remove')}
-      </button>
+      <div className="flex items-center justify-end gap-2 border-t border-border-light pt-4">
+        <Button variant="destructive" size="sm" onClick={onRemove}>
+          <Trash2 className="size-4" aria-hidden="true" />
+          {localize('com_ui_tools_remove')}
+        </Button>
+      </div>
     </div>
   );
 }

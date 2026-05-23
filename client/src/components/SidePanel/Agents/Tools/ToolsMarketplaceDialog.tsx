@@ -1,15 +1,18 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { OGDialog, OGDialogContent } from '@librechat/client';
+import { Button, OGDialog, OGDialogContent, useToastContext } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { AgentForm } from '~/common';
 import type { AgentItem, AgentItemKind, ItemFilter } from './items/types';
-import { useLocalize, useHasAccess } from '~/hooks';
+import type { CategoryOption } from './CategoryFilter';
+import { useLocalize, useHasAccess, useCategories } from '~/hooks';
 import { useListSkillsQuery } from '~/data-provider';
 import { useAgentPanelContext } from '~/Providers';
 import MarketplaceSidebar from './MarketplaceSidebar';
 import MarketplaceCatalog from './MarketplaceCatalog';
+import CategoryFilter from './CategoryFilter';
 import DetailPane from './DetailPane/DetailPane';
 import { computeToggleAction } from './items/mutations';
 import { deriveSelectedItems } from './items/selectors';
@@ -56,10 +59,34 @@ export default function ToolsMarketplaceDialog({
   const knowledgeFiles = (agent?.knowledge_files ?? []) as Array<[string, unknown]>;
   const codeFiles = (agent?.code_files ?? []) as Array<[string, unknown]>;
 
+  const navigate = useNavigate();
+  const { showToast } = useToastContext();
+  const { categories } = useCategories({ className: 'size-4', hasAccess: true });
+  const categoryOptions = useMemo<CategoryOption[]>(
+    () =>
+      ((categories ?? []) as Array<{ value?: string; label: string; icon?: React.ReactNode }>)
+        .filter((c) => Boolean(c.value))
+        .map((c) => ({ value: c.value as string, label: c.label, icon: c.icon })),
+    [categories],
+  );
+
   const [view, setView] = useState<View>('marketplace');
   const [kind, setKind] = useState<Kind>('all');
+  const [category, setCategory] = useState<string | 'all'>('all');
   const [search, setSearch] = useState('');
   const [detailItem, setDetailItem] = useState<AgentItem | null>(null);
+
+  const handleCreateNew = useCallback(
+    (createKind: 'skill' | 'mcp' | 'action') => {
+      if (createKind === 'skill') {
+        navigate('/skills/new');
+        onOpenChange(false);
+        return;
+      }
+      showToast({ message: localize('com_ui_coming_soon'), status: 'info' });
+    },
+    [navigate, onOpenChange, showToast, localize],
+  );
 
   const agentActions = useMemo(
     () => (actions ?? []).filter((a) => a.agent_id === agentId),
@@ -132,8 +159,8 @@ export default function ToolsMarketplaceDialog({
   );
 
   const filtered = useMemo(
-    () => applyFilter(catalog, { search, kind, view }),
-    [catalog, search, kind, view],
+    () => applyFilter(catalog, { search, kind, category, view }),
+    [catalog, search, kind, category, view],
   );
 
   const handleToggle = useCallback(
@@ -211,6 +238,7 @@ export default function ToolsMarketplaceDialog({
             onSelectKind={setKind}
             counts={counts}
             totalCount={catalog.length}
+            onCreateNew={handleCreateNew}
           />
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2 px-6 py-4">
@@ -228,14 +256,16 @@ export default function ToolsMarketplaceDialog({
                   className="h-10 w-full rounded-xl border border-border-light bg-transparent pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
                 />
               </div>
-              <button
-                type="button"
+              <CategoryFilter options={categoryOptions} value={category} onChange={setCategory} />
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-10 shrink-0 rounded-xl text-text-secondary hover:text-text-primary"
                 onClick={() => onOpenChange(false)}
-                className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border-light bg-transparent text-text-secondary transition-colors hover:border-border-medium hover:bg-surface-hover hover:text-text-primary"
                 aria-label={localize('com_ui_tools_close')}
               >
                 <X className="size-4" aria-hidden="true" />
-              </button>
+              </Button>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               <MarketplaceCatalog

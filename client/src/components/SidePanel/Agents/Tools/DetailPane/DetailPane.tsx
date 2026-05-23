@@ -1,5 +1,13 @@
 import { X } from 'lucide-react';
-import { OGDialog, OGDialogContent } from '@librechat/client';
+import {
+  Button,
+  OGDialog,
+  OGDialogClose,
+  OGDialogContent,
+  OGDialogHeader,
+  OGDialogTitle,
+  OGDialogDescription,
+} from '@librechat/client';
 import type { AgentItem } from '../items/types';
 import type { TranslationKeys } from '~/hooks/useLocalize';
 import BuiltinDetail from './BuiltinDetail';
@@ -58,16 +66,17 @@ export default function DetailPane({ item, agentId, onClose, onRemove }: Props) 
       ? localize(item.name as TranslationKeys)
       : item.name
     : '';
+  const kindLabel = item ? localize(KIND_LABEL_KEYS[item.kind]) : '';
 
   return (
     <OGDialog open={open} onOpenChange={(next) => !next && onClose()}>
       <OGDialogContent
-        className="w-11/12 max-w-[520px] overflow-hidden rounded-2xl border-border-medium p-0 shadow-xl md:max-h-[85vh]"
+        className="w-11/12 max-w-[520px] gap-0 overflow-hidden rounded-2xl border-none bg-background p-0 text-foreground shadow-xl md:max-h-[85vh]"
         showCloseButton={false}
       >
         {item && (
           <div className="flex max-h-[80vh] flex-col">
-            <header className="flex items-start gap-3 border-b border-border-light px-6 py-4">
+            <OGDialogHeader className="flex flex-row items-start gap-3 space-y-0 border-b border-border-light px-6 py-4">
               {Icon && (
                 <span
                   className={cn(
@@ -79,23 +88,25 @@ export default function DetailPane({ item, agentId, onClose, onRemove }: Props) 
                   <Icon className="h-5 w-5" strokeWidth={1.75} />
                 </span>
               )}
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-base font-semibold text-text-primary">
+              <div className="min-w-0 flex-1 text-left">
+                <OGDialogTitle className="truncate text-base font-semibold text-text-primary">
                   {displayName}
-                </h2>
-                <p className="text-xs uppercase tracking-wide text-text-tertiary">
-                  {localize(KIND_LABEL_KEYS[item.kind])}
-                </p>
+                </OGDialogTitle>
+                <OGDialogDescription className="m-0 text-xs uppercase tracking-wide text-text-tertiary">
+                  {kindLabel}
+                </OGDialogDescription>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border-light text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary"
-                aria-label={localize('com_ui_tools_close')}
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
-            </header>
+              <OGDialogClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 shrink-0 rounded-xl text-text-secondary hover:text-text-primary"
+                  aria-label={localize('com_ui_tools_close')}
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </Button>
+              </OGDialogClose>
+            </OGDialogHeader>
             <div className="flex-1 overflow-y-auto px-6 py-5" aria-live="polite">
               <DetailBody item={item} agentId={agentId} onRemove={() => onRemove(item)} />
             </div>

@@ -1,4 +1,17 @@
-import { LayoutGrid, ListFilter, Wrench, Server, Zap, Workflow, Star } from 'lucide-react';
+import {
+  LayoutGrid,
+  ListFilter,
+  Wrench,
+  Server,
+  Zap,
+  Workflow,
+  Star,
+  User,
+  Plus,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Button, DropdownPopup } from '@librechat/client';
+import * as Ariakit from '@ariakit/react/menu';
 import type { ReactNode } from 'react';
 import type { AgentItemKind, ItemFilter } from './items/types';
 import { useLocalize } from '~/hooks';
@@ -14,6 +27,7 @@ interface MarketplaceSidebarProps {
   onSelectKind: (kind: Kind) => void;
   counts: Record<AgentItemKind, number>;
   totalCount: number;
+  onCreateNew?: (kind: 'skill' | 'mcp' | 'action') => void;
 }
 
 interface SidebarItemProps {
@@ -53,11 +67,60 @@ export default function MarketplaceSidebar({
   onSelectKind,
   counts,
   totalCount,
+  onCreateNew,
 }: MarketplaceSidebarProps) {
   const localize = useLocalize();
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const createItems = [
+    {
+      label: localize('com_ui_tools_kind_skills'),
+      icon: <Zap className="size-4" aria-hidden="true" />,
+      onClick: () => onCreateNew?.('skill'),
+    },
+    {
+      label: localize('com_ui_tools_kind_mcp'),
+      icon: <Server className="size-4" aria-hidden="true" />,
+      onClick: () => onCreateNew?.('mcp'),
+    },
+    {
+      label: localize('com_ui_tools_kind_actions'),
+      icon: <Workflow className="size-4" aria-hidden="true" />,
+      onClick: () => onCreateNew?.('action'),
+    },
+  ];
 
   return (
-    <aside className="flex w-52 shrink-0 flex-col gap-0.5 border-r border-border-light bg-surface-primary-alt p-3">
+    <aside className="flex w-56 shrink-0 flex-col gap-0.5 border-r border-border-light bg-surface-primary-alt p-3">
+      <h2 className="px-2.5 pb-1 pt-1 text-base font-bold text-text-primary">
+        {localize('com_ui_tools_marketplace')}
+      </h2>
+
+      <DropdownPopup
+        portal={true}
+        mountByState={true}
+        unmountOnHide={true}
+        isOpen={createOpen}
+        setIsOpen={setCreateOpen}
+        menuId="marketplace-create-new"
+        className="z-[120]"
+        trigger={
+          <Ariakit.MenuButton
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className="mb-2 mt-1 w-full justify-center gap-1.5"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                <span className="truncate">{localize('com_ui_tools_create_new')}</span>
+              </Button>
+            }
+          />
+        }
+        items={createItems}
+      />
+
       <SidebarItem
         icon={<LayoutGrid className="size-4" />}
         label={localize('com_ui_all_proper')}
@@ -106,6 +169,12 @@ export default function MarketplaceSidebar({
 
       <div className="mx-2 my-3 h-px bg-border-light" />
 
+      <SidebarItem
+        icon={<User className="size-4" />}
+        label={localize('com_ui_tools_view_made_by_you')}
+        active={activeView === 'mine'}
+        onClick={() => onSelectView('mine')}
+      />
       <SidebarItem
         icon={<Star className="size-4" />}
         label={localize('com_ui_tools_view_favorites')}

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { KeyRound, Trash2 } from 'lucide-react';
+import { Button } from '@librechat/client';
 import type { ToolItem } from '../items/types';
 import { useLocalize } from '~/hooks';
 import PluginAuthPopout from '../popouts/PluginAuthPopout';
@@ -16,24 +18,24 @@ export default function ToolDetail({ item, onRemove }: Props) {
     item.plugin.authConfig.length > 0 &&
     item.plugin.authenticated !== true;
   return (
-    <div className="flex flex-col gap-4">
-      {item.description && <p className="text-sm text-text-secondary">{item.description}</p>}
-      {needsAuth && (
-        <button
-          type="button"
-          onClick={() => setAuthOpen(true)}
-          className="self-start rounded-lg border border-border-light px-3 py-1.5 text-sm text-text-primary transition-colors hover:bg-surface-secondary"
-        >
-          {localize('com_ui_configure')}
-        </button>
+    <div className="flex flex-col gap-5">
+      {item.description && (
+        <p className="text-sm leading-relaxed text-text-secondary">{item.description}</p>
       )}
-      <button
-        type="button"
-        onClick={onRemove}
-        className="self-start rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-500 transition-colors hover:bg-red-500/10"
-      >
-        {localize('com_ui_tools_remove')}
-      </button>
+      <div className="flex items-center justify-between gap-2 border-t border-border-light pt-4">
+        <div>
+          {needsAuth && (
+            <Button variant="outline" size="sm" onClick={() => setAuthOpen(true)}>
+              <KeyRound className="size-4" aria-hidden="true" />
+              {localize('com_ui_configure')}
+            </Button>
+          )}
+        </div>
+        <Button variant="destructive" size="sm" onClick={onRemove}>
+          <Trash2 className="size-4" aria-hidden="true" />
+          {localize('com_ui_tools_remove')}
+        </Button>
+      </div>
       <PluginAuthPopout
         open={authOpen}
         onOpenChange={setAuthOpen}

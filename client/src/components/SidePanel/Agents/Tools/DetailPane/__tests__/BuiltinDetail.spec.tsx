@@ -27,6 +27,8 @@ jest.mock('~/hooks', () => ({
 jest.mock('@librechat/client', () => {
   const React = jest.requireActual('react');
   return {
+    Button: ({ children, onClick, ...rest }: any) =>
+      React.createElement('button', { onClick, type: 'button', ...rest }, children),
     Switch: ({
       checked,
       onCheckedChange,
