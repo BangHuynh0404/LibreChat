@@ -7,12 +7,14 @@ interface MarketplaceCatalogProps {
   items: AgentItem[];
   selectedIds: Set<string>;
   onToggle: (item: AgentItem) => void;
+  onConfigure?: (item: AgentItem) => void;
 }
 
 export default function MarketplaceCatalog({
   items,
   selectedIds,
   onToggle,
+  onConfigure,
 }: MarketplaceCatalogProps) {
   const localize = useLocalize();
 
@@ -34,7 +36,12 @@ export default function MarketplaceCatalog({
     >
       {items.map((item) => (
         <li key={`${item.kind}:${item.id}`}>
-          <ToolCard item={item} selected={selectedIds.has(item.id)} onToggle={onToggle} />
+          <ToolCard
+            item={item}
+            selected={selectedIds.has(item.id)}
+            onToggle={onToggle}
+            onConfigure={onConfigure}
+          />
         </li>
       ))}
     </ul>

@@ -207,14 +207,23 @@ export default function ToolsMarketplaceDialog({
 
   const handleCardClick = useCallback(
     (item: AgentItem) => {
-      const wasSelected = selectedIds.has(item.id);
-      if (!wasSelected) {
-        handleToggle(item);
+      if (item.kind === 'mcp' || item.kind === 'action') {
+        setDetailItem(item);
+        return;
       }
-      setDetailItem(item);
+      const wasSelected = selectedIds.has(item.id);
+      if (!wasSelected && item.status === 'needs_setup') {
+        setDetailItem(item);
+        return;
+      }
+      handleToggle(item);
     },
     [handleToggle, selectedIds],
   );
+
+  const handleConfigure = useCallback((item: AgentItem) => {
+    setDetailItem(item);
+  }, []);
 
   const handleRemoveFromDetail = useCallback(
     (item: AgentItem) => {
@@ -272,6 +281,7 @@ export default function ToolsMarketplaceDialog({
                 items={filtered}
                 selectedIds={selectedIds}
                 onToggle={handleCardClick}
+                onConfigure={handleConfigure}
               />
             </div>
           </div>

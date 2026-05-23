@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { BadgeCheck, Check, Settings } from 'lucide-react';
 import type { AgentItem } from './items/types';
 import type { TranslationKeys } from '~/hooks/useLocalize';
 import { getIconForItem } from './items/icons';
@@ -10,6 +10,7 @@ interface ToolCardProps {
   item: AgentItem;
   selected: boolean;
   onToggle: (item: AgentItem) => void;
+  onConfigure?: (item: AgentItem) => void;
 }
 
 function useDisplayStrings(item: AgentItem): { name: string; description: string } {
@@ -31,6 +32,13 @@ const KIND_LABEL_KEYS: Record<AgentItem['kind'], TranslationKeys> = {
   action: 'com_ui_tools_kind_actions',
 };
 
+function hasConfigurableSettings(item: AgentItem): boolean {
+  if (item.kind !== 'builtin') {
+    return false;
+  }
+  return item.id === 'artifacts' || item.id === 'file_search' || item.id === 'context';
+}
+
 interface ItemIconProps {
   item: AgentItem;
   size: 'sm' | 'md';
@@ -48,7 +56,7 @@ function ItemIconView({ item, size }: ItemIconProps) {
     return (
       <span
         className={cn(
-          'flex shrink-0 items-center justify-center overflow-hidden bg-surface-secondary',
+          'flex shrink-0 items-center justify-center overflow-hidden bg-white',
           tileClasses,
         )}
         aria-hidden="true"
@@ -74,79 +82,108 @@ function ItemIconView({ item, size }: ItemIconProps) {
   );
 }
 
-export default function ToolCard({ item, selected, onToggle }: ToolCardProps) {
+export default function ToolCard({ item, selected, onToggle, onConfigure }: ToolCardProps) {
   const localize = useLocalize();
   const { name, description } = useDisplayStrings(item);
   const isNative = item.kind === 'builtin';
   const kindLabel = localize(KIND_LABEL_KEYS[item.kind]);
+  const canConfigure = hasConfigurableSettings(item) && onConfigure !== undefined;
 
   return (
-    <button
-      type="button"
-      onClick={() => onToggle(item)}
-      onMouseDown={(e) => e.preventDefault()}
-      aria-pressed={selected}
+    <div
       className={cn(
-        'group relative flex h-32 w-full cursor-pointer flex-col gap-2 rounded-2xl border p-4 text-left transition-all duration-200',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
+        't-card-select',
+        'group relative flex h-32 w-full flex-col rounded-2xl border',
         selected
           ? 'border-emerald-500/60 bg-emerald-500/[0.06] shadow-sm'
           : 'border-border-light bg-surface-primary hover:border-border-medium hover:bg-surface-tertiary hover:shadow-sm',
       )}
     >
-      <div className="flex w-full items-start gap-3">
-        <ItemIconView item={item} size="md" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start gap-1.5">
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary">
-              {name}
+      <button
+        type="button"
+        onClick={() => onToggle(item)}
+        onMouseDown={(e) => e.preventDefault()}
+        aria-pressed={selected}
+        className={cn(
+          'flex h-full w-full cursor-pointer flex-col gap-2 rounded-2xl p-4 text-left',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
+        )}
+      >
+        <div className="flex w-full items-start gap-3">
+          <ItemIconView item={item} size="md" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-1.5">
+              <p className="flex min-w-0 flex-1 items-center gap-1 text-sm font-semibold text-text-primary">
+                <span className="truncate">{name}</span>
+                {isNative && (
+                  <BadgeCheck
+                    className="size-4 shrink-0 fill-emerald-500 text-white dark:text-surface-primary"
+                    strokeWidth={2}
+                    aria-label={localize('com_ui_tools_native')}
+                  />
+                )}
+              </p>
+              <span
+                className={cn(
+                  't-success-check',
+                  'flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white',
+                )}
+                data-state={selected ? 'in' : 'out'}
+                aria-hidden="true"
+              >
+                <Check className="size-3" strokeWidth={3} />
+              </span>
+            </div>
+            <p className="truncate text-[11px] uppercase tracking-wide text-text-tertiary">
+              {kindLabel}
             </p>
-            <span
-              className={cn(
-                'flex size-5 shrink-0 items-center justify-center rounded-full transition-all duration-200',
-                selected ? 'scale-100 bg-emerald-500 text-white opacity-100' : 'scale-75 opacity-0',
-              )}
-              aria-hidden="true"
-            >
-              <Check className="size-3" strokeWidth={3} />
-            </span>
           </div>
-          <p className="truncate text-[11px] uppercase tracking-wide text-text-tertiary">
-            {kindLabel}
-          </p>
         </div>
-      </div>
-      {description ? (
-        <p className="line-clamp-2 text-xs leading-relaxed text-text-secondary">{description}</p>
-      ) : (
-        <p className="line-clamp-2 text-xs italic text-text-tertiary">
-          {isNative ? localize('com_ui_tools_native_short') : kindLabel}
-        </p>
+        {description ? (
+          <p className="line-clamp-2 text-xs leading-relaxed text-text-secondary">{description}</p>
+        ) : (
+          <p className="line-clamp-2 text-xs italic text-text-tertiary">
+            {isNative ? localize('com_ui_tools_native_short') : kindLabel}
+          </p>
+        )}
+        <div className="mt-auto flex w-full items-center gap-1.5">
+          {item.kind === 'mcp' && item.toolCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-surface-tertiary px-2 py-0.5 text-[10px] text-text-tertiary">
+              {localize(item.toolCount === 1 ? 'com_ui_tools_count_one' : 'com_ui_tools_count', {
+                count: item.toolCount,
+              })}
+            </span>
+          )}
+          {item.kind === 'action' && item.endpointCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-surface-tertiary px-2 py-0.5 text-[10px] text-text-tertiary">
+              {localize(
+                item.endpointCount === 1
+                  ? 'com_ui_tools_endpoint_count_one'
+                  : 'com_ui_tools_endpoint_count',
+                { count: item.endpointCount },
+              )}
+            </span>
+          )}
+        </div>
+      </button>
+      {canConfigure && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onConfigure?.(item);
+          }}
+          aria-label={localize('com_ui_tools_configure')}
+          className={cn(
+            'absolute bottom-2 right-2 flex size-7 items-center justify-center rounded-lg text-text-tertiary',
+            'opacity-0 transition-opacity duration-150 hover:bg-surface-tertiary hover:text-text-primary',
+            'group-focus-within:opacity-100 group-hover:opacity-100',
+            'focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring-primary',
+          )}
+        >
+          <Settings className="size-4" aria-hidden="true" />
+        </button>
       )}
-      <div className="mt-auto flex w-full items-center gap-1.5">
-        {isNative && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-            {localize('com_ui_tools_native')}
-          </span>
-        )}
-        {item.kind === 'mcp' && item.toolCount > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-surface-tertiary px-2 py-0.5 text-[10px] text-text-tertiary">
-            {localize(item.toolCount === 1 ? 'com_ui_tools_count_one' : 'com_ui_tools_count', {
-              count: item.toolCount,
-            })}
-          </span>
-        )}
-        {item.kind === 'action' && item.endpointCount > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-surface-tertiary px-2 py-0.5 text-[10px] text-text-tertiary">
-            {localize(
-              item.endpointCount === 1
-                ? 'com_ui_tools_endpoint_count_one'
-                : 'com_ui_tools_endpoint_count',
-              { count: item.endpointCount },
-            )}
-          </span>
-        )}
-      </div>
-    </button>
+    </div>
   );
 }

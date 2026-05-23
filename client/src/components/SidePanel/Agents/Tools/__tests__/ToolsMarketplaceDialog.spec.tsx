@@ -145,9 +145,15 @@ describe('ToolsMarketplaceDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  test('clicking an unselected tool card opens the detail pane', () => {
+  test('clicking an unselected tool card toggles it without opening the detail pane', () => {
+    mockSetValue.mockClear();
     render(<ToolsMarketplaceDialog open onOpenChange={jest.fn()} agentId="a1" />);
     fireEvent.click(screen.getByRole('button', { name: /DALL-E/ }));
-    expect(screen.getByTestId('tool-detail')).toBeInTheDocument();
+    expect(screen.queryByTestId('tool-detail')).not.toBeInTheDocument();
+    expect(mockSetValue).toHaveBeenCalledWith(
+      'tools',
+      expect.arrayContaining(['dalle']),
+      expect.objectContaining({ shouldDirty: true }),
+    );
   });
 });

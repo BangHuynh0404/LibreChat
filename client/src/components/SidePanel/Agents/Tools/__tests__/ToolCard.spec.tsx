@@ -44,7 +44,7 @@ describe('ToolCard', () => {
     );
   });
 
-  test('renders an Official pill for built-ins', () => {
+  test('renders a verified badge for built-ins', () => {
     const builtin: AgentItem = {
       kind: 'builtin',
       id: 'execute_code',
@@ -53,7 +53,7 @@ describe('ToolCard', () => {
       iconKey: 'execute_code',
     };
     render(<ToolCard item={builtin} selected={false} onToggle={jest.fn()} />);
-    expect(screen.getByText('com_ui_tools_native')).toBeInTheDocument();
+    expect(screen.getByLabelText('com_ui_tools_native')).toBeInTheDocument();
   });
 
   test('renders MCP tool-count pill when toolCount > 0', () => {

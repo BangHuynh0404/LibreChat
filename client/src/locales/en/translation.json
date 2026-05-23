@@ -1670,6 +1670,7 @@
   "com_ui_tools_skills_enabled_kill_switch": "Allow skills for this agent",
   "com_ui_tools_skills_enabled_kill_switch_hint": "When off, the agent ignores any selected skills.",
   "com_ui_tools_close": "Close marketplace",
+  "com_ui_tools_configure": "Configure",
   "com_ui_tools_search_no_results": "Nothing matched your search",
   "com_ui_transferred_to": "Transferred to",
   "com_ui_travel": "Travel",
