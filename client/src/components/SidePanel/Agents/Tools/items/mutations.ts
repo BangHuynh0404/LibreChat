@@ -17,7 +17,6 @@ const BUILTIN_FIELD: Record<string, AgentCapabilities> = {
   web_search: AgentCapabilities.web_search,
   file_search: AgentCapabilities.file_search,
   artifacts: AgentCapabilities.artifacts,
-  context: AgentCapabilities.context,
 };
 
 function builtinTogglePatch(id: string, selected: boolean): TogglePatch {

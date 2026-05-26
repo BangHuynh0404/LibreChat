@@ -6,7 +6,6 @@ import type { BuiltinId } from '../../items/types';
 import type { TranslationKeys } from '~/hooks/useLocalize';
 import FileContext from '../../../FileContext';
 import FileSearch from '../../../FileSearch';
-import FileSearchCheckbox from '../../../FileSearchCheckbox';
 import CodeFiles from '../../../Code/Files';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -114,12 +113,7 @@ export default function BuiltinSection({
       />
     );
   } else if (builtinId === 'file_search') {
-    body = (
-      <div className="flex flex-col gap-4">
-        <FileSearchCheckbox />
-        <FileSearch agent_id={agentId} files={knowledgeFiles} />
-      </div>
-    );
+    body = <FileSearch agent_id={agentId} files={knowledgeFiles} />;
   } else if (builtinId === 'artifacts') {
     body = (
       <ModeTabs
@@ -136,7 +130,9 @@ export default function BuiltinSection({
     body = <FileContext agent_id={agentId} files={contextFiles} />;
   }
 
-  const localizedDescription = description ? localize(description as TranslationKeys) : '';
+  const ownsHeader = builtinId === 'file_search' || builtinId === 'context';
+  const localizedDescription =
+    description && !ownsHeader ? localize(description as TranslationKeys) : '';
 
   return (
     <div className="flex flex-col gap-5">

@@ -217,6 +217,10 @@ export default function ToolsMarketplaceDialog({
         setDetailItem(item);
         return;
       }
+      if (item.kind === 'builtin' && item.id === 'context') {
+        setDetailItem(item);
+        return;
+      }
       const wasSelected = selectedIds.has(item.id);
       if (!wasSelected && item.status === 'needs_setup') {
         setDetailItem(item);

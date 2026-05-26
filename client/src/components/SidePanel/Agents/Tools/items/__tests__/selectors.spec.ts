@@ -55,6 +55,15 @@ describe('deriveSelectedItems', () => {
     expect(ids).not.toContain(AgentCapabilities.web_search);
   });
 
+  test('treats non-empty knowledge_files as file_search selected even without an explicit flag', () => {
+    const result = deriveSelectedItems(
+      { ...emptyFormState, knowledge_files: [['f', {}]] },
+      sampleCatalog,
+      [],
+    );
+    expect(result.find((i) => i.id === AgentCapabilities.file_search)).toBeDefined();
+  });
+
   test('treats non-empty context_files as context selected even without an explicit flag', () => {
     const result = deriveSelectedItems(
       { ...emptyFormState, context_files: [['f', {}]] },

@@ -48,7 +48,7 @@ const BUILTIN_DEFINITIONS: BuiltinDef[] = [
     id: AgentCapabilities.file_search,
     iconKey: 'file_search',
     nameKey: 'com_assistants_file_search',
-    descriptionKey: 'com_assistants_file_search_info',
+    descriptionKey: 'com_agents_file_search_info',
   },
 ];
 

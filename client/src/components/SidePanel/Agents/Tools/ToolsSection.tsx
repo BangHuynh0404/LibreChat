@@ -107,6 +107,10 @@ export default function ToolsSection({ agentId }: Props) {
 
   const handleQuickRemove = useCallback(
     (item: AgentItem) => {
+      if (item.kind === 'builtin' && item.id === 'context') {
+        setDialogItem(item);
+        return;
+      }
       const patch = computeToggleAction(item, { selected: true });
       switch (patch.type) {
         case 'builtin':
@@ -134,7 +138,7 @@ export default function ToolsSection({ agentId }: Props) {
           setOpen(true);
       }
     },
-    [getValues, setValue],
+    [getValues, setValue, setDialogItem],
   );
 
   const isEmpty = selected.length === 0;

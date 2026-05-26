@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ToolItem } from '../../items/types';
 import PluginAuthForm from '~/components/Plugins/Store/PluginAuthForm';
+import { pluginNeedsAuth } from '../../items/auth';
 import { useLocalize } from '~/hooks';
 
 interface Props {
@@ -10,11 +11,7 @@ interface Props {
 export default function ToolSection({ item }: Props) {
   const localize = useLocalize();
   const [authDone, setAuthDone] = useState(false);
-  const needsAuth =
-    Array.isArray(item.plugin.authConfig) &&
-    item.plugin.authConfig.length > 0 &&
-    item.plugin.authenticated !== true &&
-    !authDone;
+  const needsAuth = pluginNeedsAuth(item.plugin) && !authDone;
 
   return (
     <div className="flex flex-col gap-5">

@@ -3,6 +3,7 @@ import { BadgeCheck, Check, Settings } from 'lucide-react';
 import type { AgentItem } from './items/types';
 import type { TranslationKeys } from '~/hooks/useLocalize';
 import { getIconForItem } from './items/icons';
+import { pluginNeedsAuth } from './items/auth';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -33,10 +34,13 @@ const KIND_LABEL_KEYS: Record<AgentItem['kind'], TranslationKeys> = {
 };
 
 function hasConfigurableSettings(item: AgentItem): boolean {
-  if (item.kind !== 'builtin') {
-    return false;
+  if (item.kind === 'builtin') {
+    return item.id === 'artifacts' || item.id === 'file_search' || item.id === 'context';
   }
-  return item.id === 'artifacts' || item.id === 'file_search' || item.id === 'context';
+  if (item.kind === 'tool') {
+    return pluginNeedsAuth(item.plugin);
+  }
+  return false;
 }
 
 interface ItemIconProps {
