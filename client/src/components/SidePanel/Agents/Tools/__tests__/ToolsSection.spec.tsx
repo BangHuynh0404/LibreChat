@@ -54,15 +54,22 @@ describe('ToolsSection', () => {
     expect(screen.getByText('com_ui_tools_section_title')).toBeInTheDocument();
   });
 
+  test('renders a separate Skills section', () => {
+    render(<ToolsSection agentId="a" />);
+    expect(screen.getByText('com_ui_skills')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'com_ui_add_skills' })).toBeInTheDocument();
+  });
+
   test('renders Add button that opens the marketplace dialog', () => {
     render(<ToolsSection agentId="a" />);
-    const addButton = screen.getByRole('button', { name: /com_ui_add/ });
+    const addButton = screen.getByRole('button', { name: 'com_ui_add_tools' });
     fireEvent.click(addButton);
     expect(screen.getByTestId('marketplace-open')).toBeInTheDocument();
   });
 
-  test('renders empty state when no items are selected', () => {
+  test('renders empty state for both sections when nothing is selected', () => {
     render(<ToolsSection agentId="a" />);
     expect(screen.getByText('com_ui_tools_empty')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_skills_empty')).toBeInTheDocument();
   });
 });

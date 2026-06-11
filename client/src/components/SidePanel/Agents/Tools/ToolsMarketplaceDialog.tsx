@@ -35,6 +35,7 @@ interface ToolsMarketplaceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agentId: string;
+  initialKind?: AgentItemKind | 'all';
 }
 
 type View = NonNullable<ItemFilter['view']>;
@@ -47,6 +48,7 @@ export default function ToolsMarketplaceDialog({
   open,
   onOpenChange,
   agentId,
+  initialKind = 'all',
 }: ToolsMarketplaceDialogProps) {
   const localize = useLocalize();
   const { control, getValues, setValue } = useFormContext<AgentForm>();
@@ -104,7 +106,7 @@ export default function ToolsMarketplaceDialog({
   );
 
   const [view, setView] = useState<View>('marketplace');
-  const [kind, setKind] = useState<Kind>('all');
+  const [kind, setKind] = useState<Kind>(initialKind);
   const [category, setCategory] = useState<string | 'all'>('all');
   const [search, setSearch] = useState('');
   const [detailItem, setDetailItem] = useState<AgentItem | null>(null);

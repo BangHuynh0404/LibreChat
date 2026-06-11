@@ -4,7 +4,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { Label, OGDialog, OGDialogTemplate, useToastContext } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { AgentForm } from '~/common';
-import type { AgentItem } from './items/types';
+import type { AgentItem, AgentItemKind } from './items/types';
 import ToolRow from './ToolRow';
 import ItemDialog from './ItemDialog/ItemDialog';
 import ToolsMarketplaceDialog from './ToolsMarketplaceDialog';
@@ -25,8 +25,14 @@ export default function ToolsSection({ agentId }: Props) {
   const localize = useLocalize();
   const { showToast } = useToastContext();
   const [open, setOpen] = useState(false);
+  const [marketplaceKind, setMarketplaceKind] = useState<AgentItemKind | 'all'>('all');
   const [dialogItem, setDialogItem] = useState<AgentItem | null>(null);
   const [pendingActionRemoval, setPendingActionRemoval] = useState<string | null>(null);
+
+  const openMarketplace = useCallback((kind: AgentItemKind | 'all') => {
+    setMarketplaceKind(kind);
+    setOpen(true);
+  }, []);
   const { control, getValues, setValue } = useFormContext<AgentForm>();
   const { agentsConfig, regularTools, mcpServersMap, actions } = useAgentPanelContext();
   const { removeTool: removeMCPTool } = useRemoveMCPTool();
@@ -183,50 +189,41 @@ export default function ToolsSection({ agentId }: Props) {
     setPendingActionRemoval(null);
   }, [pendingActionRemoval, agentId, deleteAgentAction, showToast, localize]);
 
-  const isEmpty = selected.length === 0;
+  const toolItems = useMemo(() => selected.filter((item) => item.kind !== 'skill'), [selected]);
+  const skillItems = useMemo(() => selected.filter((item) => item.kind === 'skill'), [selected]);
 
   return (
-    <div className="mb-3 flex flex-col">
-      <div className="mb-1 flex items-center justify-between">
-        <label className="block text-[11px] font-medium uppercase tracking-wide text-text-secondary">
-          {localize('com_ui_tools_section_title')}
-          {selected.length > 0 && (
-            <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-surface-tertiary px-1.5 text-[10px] font-medium normal-case tracking-normal text-text-secondary">
-              {selected.length}
-            </span>
-          )}
-        </label>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
-        >
-          <Plus className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
-          {localize('com_ui_add')}
-        </button>
-      </div>
-      {isEmpty ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex w-full flex-col items-center gap-1 rounded-xl border border-dashed border-border-light px-2 py-4 text-text-secondary transition-colors hover:border-border-medium hover:bg-surface-secondary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          <span className="text-xs">{localize('com_ui_tools_empty')}</span>
-          <span className="text-[11px] text-text-secondary">
-            {localize('com_ui_tools_empty_hint')}
-          </span>
-        </button>
-      ) : (
-        <ul className="flex flex-col gap-1.5">
-          {selected.map((item) => (
-            <li key={`${item.kind}:${item.id}`}>
-              <ToolRow item={item} onInfo={setDialogItem} onRemove={handleQuickRemove} />
-            </li>
-          ))}
-        </ul>
+    <>
+      <SelectedSection
+        title={localize('com_ui_tools_section_title')}
+        addLabel={localize('com_ui_add_tools')}
+        emptyLabel={localize('com_ui_tools_empty')}
+        emptyHint={localize('com_ui_tools_empty_hint')}
+        items={toolItems}
+        onAdd={() => openMarketplace('all')}
+        onInfo={setDialogItem}
+        onRemove={handleQuickRemove}
+      />
+      {hasSkillsAccess && (
+        <SelectedSection
+          title={localize('com_ui_skills')}
+          addLabel={localize('com_ui_add_skills')}
+          emptyLabel={localize('com_ui_skills_empty')}
+          emptyHint={localize('com_ui_skills_empty_hint')}
+          items={skillItems}
+          onAdd={() => openMarketplace('skill')}
+          onInfo={setDialogItem}
+          onRemove={handleQuickRemove}
+        />
       )}
-      {open && <ToolsMarketplaceDialog open={open} onOpenChange={setOpen} agentId={agentId} />}
+      {open && (
+        <ToolsMarketplaceDialog
+          open={open}
+          onOpenChange={setOpen}
+          agentId={agentId}
+          initialKind={marketplaceKind}
+        />
+      )}
       <ItemDialog item={dialogItem} agentId={agentId} onClose={() => setDialogItem(null)} />
       <OGDialog
         open={pendingActionRemoval != null}
@@ -253,6 +250,72 @@ export default function ToolsSection({ agentId }: Props) {
           }}
         />
       </OGDialog>
+    </>
+  );
+}
+
+interface SelectedSectionProps {
+  title: string;
+  addLabel: string;
+  emptyLabel: string;
+  emptyHint: string;
+  items: AgentItem[];
+  onAdd: () => void;
+  onInfo: (item: AgentItem) => void;
+  onRemove: (item: AgentItem) => void;
+}
+
+function SelectedSection({
+  title,
+  addLabel,
+  emptyLabel,
+  emptyHint,
+  items,
+  onAdd,
+  onInfo,
+  onRemove,
+}: SelectedSectionProps) {
+  const localize = useLocalize();
+  return (
+    <div className="mb-3 flex flex-col">
+      <div className="mb-1 flex items-center justify-between">
+        <label className="block text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+          {title}
+          {items.length > 0 && (
+            <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-surface-tertiary px-1.5 text-[10px] font-medium normal-case tracking-normal text-text-secondary">
+              {items.length}
+            </span>
+          )}
+        </label>
+        <button
+          type="button"
+          onClick={onAdd}
+          aria-label={addLabel}
+          className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+        >
+          <Plus className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+          {localize('com_ui_add')}
+        </button>
+      </div>
+      {items.length === 0 ? (
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex w-full flex-col items-center gap-1 rounded-xl border border-dashed border-border-light px-2 py-4 text-text-secondary transition-colors hover:border-border-medium hover:bg-surface-secondary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          <span className="text-xs">{emptyLabel}</span>
+          <span className="text-[11px] text-text-secondary">{emptyHint}</span>
+        </button>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {items.map((item) => (
+            <li key={`${item.kind}:${item.id}`}>
+              <ToolRow item={item} onInfo={onInfo} onRemove={onRemove} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
