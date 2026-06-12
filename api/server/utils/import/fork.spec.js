@@ -6,6 +6,11 @@ jest.mock('~/models', () => ({
   getMessages: jest.fn(),
   bulkSaveMessages: jest.fn(),
   bulkIncrementTagCounts: jest.fn(),
+  getSharedMessages: jest.fn(),
+}));
+
+jest.mock('~/server/controllers/ModelController', () => ({
+  getModelsConfig: jest.fn().mockResolvedValue({ openAI: ['gpt-test'] }),
 }));
 
 let mockIdCounter = 0;
@@ -21,6 +26,7 @@ jest.mock('uuid', () => {
 const {
   forkConversation,
   duplicateConversation,
+  forkSharedConversation,
   splitAtTargetLevel,
   getAllMessagesUpToParent,
   getMessagesUpToTargetLevel,
@@ -32,6 +38,7 @@ const {
   bulkSaveConvos,
   getMessages,
   bulkSaveMessages,
+  getSharedMessages,
 } = require('~/models');
 const { createImportBatchBuilder } = require('./importBatchBuilder');
 const BaseClient = require('~/app/clients/BaseClient');
@@ -298,6 +305,150 @@ describe('duplicateConversation', () => {
 
     // bulkIncrementTagCounts will be called with empty array
     expect(bulkIncrementTagCounts).toHaveBeenCalledWith('user1', []);
+  });
+});
+
+describe('forkSharedConversation', () => {
+  const mockSharedMessages = [
+    {
+      messageId: 'msg_a',
+      parentMessageId: Constants.NO_PARENT,
+      text: 'Shared root',
+      isCreatedByUser: true,
+      createdAt: '2021-01-01',
+    },
+    {
+      messageId: 'msg_b',
+      parentMessageId: 'msg_a',
+      text: 'Shared reply',
+      isCreatedByUser: false,
+      createdAt: '2021-01-02',
+    },
+  ];
+
+  const mockShare = {
+    shareId: 'share123',
+    conversationId: 'convo_anon',
+    title: 'Shared Title',
+    messages: mockSharedMessages,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockIdCounter = 0;
+    getSharedMessages.mockResolvedValue(mockShare);
+    getConvo.mockResolvedValue(mockConversation);
+    getMessages.mockResolvedValue(mockSharedMessages);
+    bulkSaveConvos.mockResolvedValue(null);
+    bulkSaveMessages.mockResolvedValue(null);
+    bulkIncrementTagCounts.mockResolvedValue(null);
+  });
+
+  test('should clone shared messages into a conversation owned by the requesting user', async () => {
+    const result = await forkSharedConversation({
+      shareId: 'share123',
+      shareResourceId: 'resource123',
+      requestUserId: 'user1',
+    });
+
+    expect(getSharedMessages).toHaveBeenCalledWith('share123', 'resource123');
+
+    const savedMessages = bulkSaveMessages.mock.calls[0][0];
+    expect(savedMessages).toHaveLength(2);
+    const [root, reply] = savedMessages;
+    expect(root).toMatchObject({
+      text: 'Shared root',
+      user: 'user1',
+      endpoint: 'openAI',
+      parentMessageId: Constants.NO_PARENT,
+    });
+    expect(reply).toMatchObject({
+      text: 'Shared reply',
+      user: 'user1',
+      parentMessageId: root.messageId,
+    });
+    expect(root.messageId).not.toBe('msg_a');
+    expect(reply.messageId).not.toBe('msg_b');
+
+    const savedConvos = bulkSaveConvos.mock.calls[0][0];
+    expect(savedConvos[0]).toMatchObject({
+      user: 'user1',
+      title: 'Shared Title',
+      endpoint: 'openAI',
+      model: 'gpt-test',
+    });
+
+    expect(getConvo).toHaveBeenCalledWith('user1', savedConvos[0].conversationId);
+    expect(result).toMatchObject({ conversation: mockConversation, messages: mockSharedMessages });
+  });
+
+  test('should return null when the share is not found', async () => {
+    getSharedMessages.mockResolvedValue(null);
+
+    const result = await forkSharedConversation({
+      shareId: 'missing',
+      requestUserId: 'user1',
+    });
+
+    expect(result).toBeNull();
+    expect(bulkSaveMessages).not.toHaveBeenCalled();
+  });
+
+  test('should return null when the share has no messages', async () => {
+    getSharedMessages.mockResolvedValue({ ...mockShare, messages: [] });
+
+    const result = await forkSharedConversation({
+      shareId: 'share123',
+      requestUserId: 'user1',
+    });
+
+    expect(result).toBeNull();
+    expect(bulkSaveMessages).not.toHaveBeenCalled();
+  });
+
+  test('should normalize orphaned parentMessageId references to NO_PARENT', async () => {
+    getSharedMessages.mockResolvedValue({
+      ...mockShare,
+      messages: [
+        {
+          messageId: 'msg_orphan',
+          parentMessageId: 'msg_deleted',
+          text: 'Orphaned message',
+          createdAt: '2021-01-01',
+        },
+      ],
+    });
+
+    await forkSharedConversation({
+      shareId: 'share123',
+      requestUserId: 'user1',
+    });
+
+    const savedMessages = bulkSaveMessages.mock.calls[0][0];
+    expect(savedMessages[0].parentMessageId).toBe(Constants.NO_PARENT);
+  });
+
+  test('should strip anonymized model identifiers from cloned messages', async () => {
+    getSharedMessages.mockResolvedValue({
+      ...mockShare,
+      messages: [
+        {
+          messageId: 'msg_a',
+          parentMessageId: Constants.NO_PARENT,
+          text: 'Assistant message',
+          model: 'a_anon123',
+          createdAt: '2021-01-01',
+        },
+      ],
+    });
+
+    await forkSharedConversation({
+      shareId: 'share123',
+      requestUserId: 'user1',
+    });
+
+    const savedMessages = bulkSaveMessages.mock.calls[0][0];
+    expect(savedMessages[0].model).not.toBe('a_anon123');
   });
 });
 

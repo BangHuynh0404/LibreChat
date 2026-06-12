@@ -884,6 +884,8 @@
   "com_ui_context": "Context",
   "com_ui_context_filter_sort": "Filter and Sort by Context",
   "com_ui_continue": "Continue",
+  "com_ui_continue_chat": "Continue this chat",
+  "com_ui_continue_chat_error": "There was an error copying this conversation",
   "com_ui_continue_oauth": "Continue with OAuth",
   "com_ui_control_bar": "Control bar",
   "com_ui_conversation": "conversation",

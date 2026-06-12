@@ -1,9 +1,9 @@
 import { memo, useState, useCallback, useContext } from 'react';
 import Cookies from 'js-cookie';
 import { useRecoilState } from 'recoil';
-import { useParams } from 'react-router-dom';
 import { buildTree } from 'librechat-data-provider';
-import { CalendarDays, Settings } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { CalendarDays, Settings, MessageSquarePlus } from 'lucide-react';
 import { useGetSharedMessages } from 'librechat-data-provider/react-query';
 import {
   Spinner,
@@ -15,20 +15,23 @@ import {
   OGDialogHeader,
   OGDialogContent,
   OGDialogTrigger,
+  useToastContext,
 } from '@librechat/client';
 import { ThemeSelector, LangSelector } from '~/components/Nav/SettingsTabs/General/General';
+import { useGetStartupConfig, useForkSharedConvoMutation } from '~/data-provider';
 import { ShareMessagesProvider } from './ShareMessagesProvider';
 import { ShareArtifactsContainer } from './ShareArtifacts';
 import { useLocalize, useDocumentTitle } from '~/hooks';
-import { useGetStartupConfig } from '~/data-provider';
+import { cn, getResponseStatus } from '~/utils';
 import { ShareContext } from '~/Providers';
 import MessagesView from './MessagesView';
 import Footer from '../Chat/Footer';
-import { cn } from '~/utils';
 import store from '~/store';
 
 function SharedView() {
   const localize = useLocalize();
+  const navigate = useNavigate();
+  const { showToast } = useToastContext();
   const { data: config } = useGetStartupConfig(undefined, { context: 'share' });
   const { theme, setTheme } = useContext(ThemeContext);
   const { shareId } = useParams();
@@ -37,6 +40,29 @@ function SharedView() {
   const messagesTree = dataTree?.length === 0 ? null : (dataTree ?? null);
 
   const [langcode, setLangcode] = useRecoilState(store.lang);
+
+  const forkShare = useForkSharedConvoMutation({
+    onSuccess: (forkData) => {
+      navigate(`/c/${forkData.conversation.conversationId}`);
+    },
+    onError: (error) => {
+      const isRateLimitError = getResponseStatus(error) === 429;
+      showToast({
+        message: isRateLimitError
+          ? localize('com_ui_fork_error_rate_limit')
+          : localize('com_ui_continue_chat_error'),
+        status: 'error',
+      });
+    },
+  });
+
+  const { mutate: forkSharedConvo } = forkShare;
+  const handleContinue = useCallback(() => {
+    if (shareId == null || shareId === '') {
+      return;
+    }
+    forkSharedConvo({ shareId });
+  }, [shareId, forkSharedConvo]);
 
   // configure document title
   let docTitle = '';
@@ -104,6 +130,9 @@ function SharedView() {
           onThemeChange={handleThemeChange}
           onLangChange={handleLangChange}
           settingsLabel={localize('com_nav_settings')}
+          continueLabel={localize('com_ui_continue_chat')}
+          onContinue={handleContinue}
+          isContinuing={forkShare.isLoading}
         />
         <ShareMessagesProvider messages={data.messages}>
           <MessagesView messagesTree={messagesTree} conversationId="shared-conversation" />
@@ -164,6 +193,9 @@ interface ShareHeaderProps {
   theme: string;
   langcode: string;
   settingsLabel: string;
+  continueLabel: string;
+  isContinuing: boolean;
+  onContinue: () => void;
   onThemeChange: (value: string) => void;
   onLangChange: (value: string) => void;
 }
@@ -174,6 +206,9 @@ function ShareHeader({
   theme,
   langcode,
   settingsLabel,
+  continueLabel,
+  isContinuing,
+  onContinue,
   onThemeChange,
   onLangChange,
 }: ShareHeaderProps) {
@@ -182,7 +217,7 @@ function ShareHeader({
 
   const handleDialogOutside = useCallback((event: Event) => {
     const target = event.target as HTMLElement | null;
-    if (target?.closest('[data-dialog-ignore="true"]')) {
+    if (target?.closest('[data-dialog-ignore="true"], .popover-ui')) {
       event.preventDefault();
     }
   }, []);
@@ -203,44 +238,64 @@ function ShareHeader({
             )}
           </div>
 
-          <OGDialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-            <OGDialogTrigger asChild>
-              <Button
-                size={isMobile ? 'icon' : 'default'}
-                type="button"
-                variant="outline"
-                aria-label={settingsLabel}
-                className={cn(
-                  'rounded-full border-border-medium text-sm text-text-primary transition-colors',
-                  isMobile
-                    ? 'absolute bottom-4 right-4 justify-center p-0 shadow-lg'
-                    : 'gap-2 self-start px-4 py-2',
-                )}
-              >
-                <Settings className="size-4" aria-hidden="true" />
-                <span className="hidden md:inline">{settingsLabel}</span>
-              </Button>
-            </OGDialogTrigger>
-            <OGDialogContent
-              className="w-11/12 max-w-lg"
-              showCloseButton={true}
-              onPointerDownOutside={handleDialogOutside}
-              onInteractOutside={handleDialogOutside}
+          <div className="flex items-center gap-2 md:self-start">
+            <Button
+              type="button"
+              variant="submit"
+              onClick={onContinue}
+              disabled={isContinuing}
+              className="gap-2 rounded-full px-4 py-2 text-sm"
             >
-              <OGDialogHeader className="text-left">
-                <OGDialogTitle>{settingsLabel}</OGDialogTitle>
-              </OGDialogHeader>
-              <div className="flex flex-col gap-4 pt-2 text-sm">
-                <div className="relative focus-within:z-[100]">
-                  <ThemeSelector theme={theme} onChange={onThemeChange} portal={false} />
+              {isContinuing ? (
+                <Spinner className="size-4" />
+              ) : (
+                <MessageSquarePlus className="size-4" aria-hidden="true" />
+              )}
+              {continueLabel}
+            </Button>
+            <OGDialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+              <OGDialogTrigger asChild>
+                <Button
+                  size={isMobile ? 'icon' : 'default'}
+                  type="button"
+                  variant="outline"
+                  aria-label={settingsLabel}
+                  className={cn(
+                    'rounded-full border-border-medium text-sm text-text-primary transition-colors',
+                    isMobile
+                      ? 'absolute bottom-4 right-4 justify-center p-0 shadow-lg'
+                      : 'gap-2 self-start px-4 py-2',
+                  )}
+                >
+                  <Settings className="size-4" aria-hidden="true" />
+                  <span className="hidden md:inline">{settingsLabel}</span>
+                </Button>
+              </OGDialogTrigger>
+              <OGDialogContent
+                className="w-11/12 max-w-lg"
+                showCloseButton={true}
+                onPointerDownOutside={handleDialogOutside}
+                onInteractOutside={handleDialogOutside}
+              >
+                <OGDialogHeader className="text-left">
+                  <OGDialogTitle>{settingsLabel}</OGDialogTitle>
+                </OGDialogHeader>
+                <div className="flex flex-col gap-4 pt-2 text-sm">
+                  <ThemeSelector
+                    theme={theme}
+                    onChange={onThemeChange}
+                    popoverClassName="z-[150]"
+                  />
+                  <div className="bg-border-medium/60 h-px w-full" />
+                  <LangSelector
+                    langcode={langcode}
+                    onChange={onLangChange}
+                    popoverClassName="z-[150]"
+                  />
                 </div>
-                <div className="bg-border-medium/60 h-px w-full" />
-                <div className="relative focus-within:z-[100]">
-                  <LangSelector langcode={langcode} onChange={onLangChange} portal={false} />
-                </div>
-              </div>
-            </OGDialogContent>
-          </OGDialog>
+              </OGDialogContent>
+            </OGDialog>
+          </div>
         </div>
       </div>
     </section>

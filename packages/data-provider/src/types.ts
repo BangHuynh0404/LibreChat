@@ -410,6 +410,10 @@ export type TForkConvoResponse = {
   messages: TMessage[];
 };
 
+export type TForkSharedConvoRequest = {
+  shareId: string;
+};
+
 export type TSearchResults = {
   conversations: TConversation[];
   messages: TMessage[];

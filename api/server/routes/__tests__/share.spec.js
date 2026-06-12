@@ -59,9 +59,23 @@ jest.mock('~/models', () => ({
   getRoleByName: jest.fn(),
 }));
 
-jest.mock('~/server/middleware/canAccessSharedLink', () => (_req, _res, next) => next());
+jest.mock('~/server/middleware/canAccessSharedLink', () => (req, _res, next) => {
+  req.shareResourceId = 'resource-123';
+  next();
+});
 jest.mock('~/server/middleware/optionalJwtAuth', () => (req, _res, next) => next());
 jest.mock('~/server/middleware/requireJwtAuth', () => (req, res, next) => next());
+
+jest.mock('~/server/middleware/limiters', () => ({
+  createForkLimiters: () => ({
+    forkIpLimiter: (_req, _res, next) => next(),
+    forkUserLimiter: (_req, _res, next) => next(),
+  }),
+}));
+
+jest.mock('~/server/utils/import/fork', () => ({
+  forkSharedConversation: jest.fn(),
+}));
 
 const { RetentionMode } = require('librechat-data-provider');
 const { createTempChatExpirationDate, logger } = require('@librechat/data-schemas');
@@ -72,6 +86,7 @@ const {
   updateSharedLink,
   getRoleByName,
 } = require('~/models');
+const { forkSharedConversation } = require('~/server/utils/import/fork');
 const shareRouter = require('../share');
 
 const activeExpiration = new Date('2030-01-01T00:00:00.000Z');
@@ -325,5 +340,46 @@ describe('share routes retention', () => {
     expect(response.status).toBe(200);
     expect(mockSharedLinksAccess).not.toHaveBeenCalled();
     expect(deleteSharedLinkWithCleanup).toHaveBeenCalledWith('user-123', 'share-123');
+  });
+});
+
+describe('share fork route', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('forks a shared conversation for the requesting user', async () => {
+    const forkResult = {
+      conversation: { conversationId: 'convo-456', title: 'Shared Title' },
+      messages: [{ messageId: 'msg-456' }],
+    };
+    forkSharedConversation.mockResolvedValue(forkResult);
+
+    const response = await request(buildApp()).post('/api/share/share-123/fork');
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual(forkResult);
+    expect(forkSharedConversation).toHaveBeenCalledWith({
+      shareId: 'share-123',
+      shareResourceId: 'resource-123',
+      requestUserId: 'user-123',
+      userRole: undefined,
+    });
+  });
+
+  it('returns 404 when the shared conversation is missing or empty', async () => {
+    forkSharedConversation.mockResolvedValue(null);
+
+    const response = await request(buildApp()).post('/api/share/share-123/fork');
+
+    expect(response.status).toBe(404);
+  });
+
+  it('returns 500 when forking fails', async () => {
+    forkSharedConversation.mockRejectedValue(new Error('db down'));
+
+    const response = await request(buildApp()).post('/api/share/share-123/fork');
+
+    expect(response.status).toBe(500);
   });
 });

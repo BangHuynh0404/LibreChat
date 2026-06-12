@@ -21,6 +21,8 @@ const {
   getRoleByName,
 } = require('~/models');
 const canAccessSharedLink = require('~/server/middleware/canAccessSharedLink');
+const { forkSharedConversation } = require('~/server/utils/import/fork');
+const { createForkLimiters } = require('~/server/middleware/limiters');
 const optionalJwtAuth = require('~/server/middleware/optionalJwtAuth');
 const requireJwtAuth = require('~/server/middleware/requireJwtAuth');
 const router = express.Router();
@@ -68,6 +70,33 @@ if (allowSharedLinks) {
       res.status(500).json({ message: 'Error getting shared messages' });
     }
   });
+
+  const { forkIpLimiter, forkUserLimiter } = createForkLimiters();
+
+  router.post(
+    '/:shareId/fork',
+    requireJwtAuth,
+    forkIpLimiter,
+    forkUserLimiter,
+    canAccessSharedLink,
+    async (req, res) => {
+      try {
+        const result = await forkSharedConversation({
+          shareId: req.params.shareId,
+          shareResourceId: req.shareResourceId,
+          requestUserId: req.user.id,
+          userRole: req.user.role,
+        });
+        if (!result) {
+          return res.status(404).json({ message: 'Shared conversation not found' });
+        }
+        res.status(201).json(result);
+      } catch (error) {
+        logger.error('Error forking shared conversation:', error);
+        res.status(500).json({ message: 'Error forking shared conversation' });
+      }
+    },
+  );
 }
 
 /**

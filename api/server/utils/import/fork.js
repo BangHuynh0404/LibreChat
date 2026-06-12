@@ -2,8 +2,9 @@ const { v4: uuidv4 } = require('uuid');
 const { logger } = require('@librechat/data-schemas');
 const { EModelEndpoint, Constants, ForkOptions } = require('librechat-data-provider');
 const { createImportBatchBuilder } = require('./importBatchBuilder');
+const { getConvo, getMessages, getSharedMessages } = require('~/models');
 const BaseClient = require('~/app/clients/BaseClient');
-const { getConvo, getMessages } = require('~/models');
+const { resolveImportDefaultModel } = require('./defaults');
 
 /**
  * Helper function to clone messages with proper parent-child relationships and timestamps
@@ -353,6 +354,67 @@ function splitAtTargetLevel(messages, targetMessageId) {
 }
 
 /**
+ * Forks a shared (sanitized) conversation into a fresh conversation owned by the requesting user.
+ * Only the anonymized, allowlisted message fields returned by `getSharedMessages` are cloned,
+ * so no private data from the original owner can leak into the new conversation.
+ * @param {object} params - The parameters for forking the shared conversation.
+ * @param {string} params.shareId - The ID of the shared link to fork from.
+ * @param {string} [params.shareResourceId] - The SharedLink resource ID set by `canAccessSharedLink`.
+ * @param {string} params.requestUserId - The ID of the user making the request.
+ * @param {string} [params.userRole] - The role of the requesting user, used to resolve the default model.
+ * @param {(userId: string) => ImportBatchBuilder} [params.builderFactory] - Optional factory function for creating an ImportBatchBuilder instance.
+ * @returns {Promise<TForkConvoResponse | null>} The new conversation and messages, or null when the share is missing or empty.
+ */
+async function forkSharedConversation({
+  shareId,
+  shareResourceId,
+  requestUserId,
+  userRole,
+  builderFactory = createImportBatchBuilder,
+}) {
+  const share = await getSharedMessages(shareId, shareResourceId);
+  if (!share?.messages?.length) {
+    return null;
+  }
+
+  const importBatchBuilder = builderFactory(requestUserId);
+  importBatchBuilder.startConversation(EModelEndpoint.openAI);
+
+  const messageIds = new Set(share.messages.map((message) => message.messageId));
+  const messagesToClone = share.messages.map(({ model: _model, ...message }) => ({
+    ...message,
+    parentMessageId:
+      message.parentMessageId != null && messageIds.has(message.parentMessageId)
+        ? message.parentMessageId
+        : Constants.NO_PARENT,
+  }));
+
+  cloneMessagesWithTimestamps(messagesToClone, importBatchBuilder);
+
+  const defaultModel = await resolveImportDefaultModel({
+    endpoint: EModelEndpoint.openAI,
+    requestUserId,
+    userRole,
+  });
+  const result = importBatchBuilder.finishConversation(share.title, new Date(), {}, defaultModel);
+  await importBatchBuilder.saveBatch();
+  logger.debug(
+    `user: ${requestUserId} | New conversation "${result.conversation.title}" forked from share ID ${shareId}`,
+  );
+
+  const conversation = await getConvo(requestUserId, result.conversation.conversationId);
+  const messages = await getMessages({
+    user: requestUserId,
+    conversationId: conversation.conversationId,
+  });
+
+  return {
+    conversation,
+    messages,
+  };
+}
+
+/**
  * Duplicates a conversation and all its messages.
  * @param {object} params - The parameters for duplicating the conversation.
  * @param {string} params.userId - The ID of the user duplicating the conversation.
@@ -404,6 +466,7 @@ module.exports = {
   forkConversation,
   splitAtTargetLevel,
   duplicateConversation,
+  forkSharedConversation,
   getAllMessagesUpToParent,
   getMessagesUpToTargetLevel,
   cloneMessagesWithTimestamps,
