@@ -26,6 +26,8 @@ const {
 } = require('~/models');
 const { getGraphApiToken } = require('~/server/services/GraphTokenService');
 const { getOpenIdConfig, getOpenIdEmail } = require('~/strategies');
+const { isOpenAuthMode } = require('~/server/utils/authMode');
+const { issueGuestAuthTokens } = require('~/server/services/GuestAuthService');
 
 const AUTH_REFRESH_USER_PROJECTION = '-password -__v -totpSecret -backupCodes -federatedTokens';
 const OPENID_REUSE_EXPIRY_BUFFER_SECONDS = 30;
@@ -155,6 +157,16 @@ const resetPasswordController = async (req, res) => {
 const refreshController = async (req, res) => {
   const parsedCookies = req.headers.cookie ? cookies.parse(req.headers.cookie) : {};
   const token_provider = parsedCookies.token_provider;
+
+  if (isOpenAuthMode()) {
+    try {
+      const { token, user } = await issueGuestAuthTokens(req, res);
+      return res.status(200).send({ token, user: sanitizeUserForAuthResponse(user) });
+    } catch (error) {
+      logger.error('[refreshController] Guest auth error', error);
+      return res.status(500).send('Guest authentication failed');
+    }
+  }
 
   if (token_provider === 'openid' && isEnabled(process.env.OPENID_REUSE_TOKENS)) {
     /** For OpenID users, read refresh token from session to avoid large cookie issues */

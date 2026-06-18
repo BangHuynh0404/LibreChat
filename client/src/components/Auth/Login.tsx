@@ -59,6 +59,7 @@ function Login() {
   }, [disableAutoRedirect, searchParams, setSearchParams]);
 
   const shouldAutoRedirect =
+    startupConfig?.authRequired !== false &&
     startupConfig?.openidLoginEnabled &&
     startupConfig?.openidAutoRedirect &&
     startupConfig?.serverDomain &&

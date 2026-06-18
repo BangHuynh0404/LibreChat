@@ -12,6 +12,8 @@ const {
   maybeRefreshCloudFrontAuthCookiesMiddleware,
   recordRumProxyRequest,
 } = require('@librechat/api');
+const { isOpenAuthMode } = require('~/server/utils/authMode');
+const { attachGuestUser } = require('~/server/services/GuestAuthService');
 
 const hasPassportStrategy = (strategy) =>
   typeof passport._strategy === 'function' && passport._strategy(strategy) != null;
@@ -84,6 +86,20 @@ const isOpenIdReuseUser = (strategy, user, openIdReuseUserId) =>
  * for downstream Mongoose tenant isolation and structured logging.
  */
 const requireJwtAuth = (req, res, next) => {
+  if (isOpenAuthMode()) {
+    return attachGuestUser(req, res, (guestErr) => {
+      if (guestErr) {
+        return next(guestErr);
+      }
+      return tenantContextMiddleware(req, res, (tenantErr) => {
+        if (tenantErr) {
+          return next(tenantErr);
+        }
+        refreshCloudFrontCookies(req, res, next);
+      });
+    });
+  }
+
   const { tokenProvider, openidReuseEnabled, openidJwtAvailable, openIdReuseUserId, strategies } =
     getAuthStrategies(req);
   const authLogState = {
@@ -196,6 +212,10 @@ const requireJwtAuth = (req, res, next) => {
 };
 
 const requireRumProxyAuth = (req, res, next) => {
+  if (isOpenAuthMode()) {
+    return attachGuestUser(req, res, next);
+  }
+
   const { openIdReuseUserId, strategies } = getAuthStrategies(req);
   const endpoint = getRumProxyEndpoint(req);
   let authErrorSeen = false;

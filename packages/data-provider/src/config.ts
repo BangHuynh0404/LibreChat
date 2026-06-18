@@ -1352,6 +1352,10 @@ export type StartupConfigContext = 'share';
 
 export type TStartupConfig = {
   appTitle: string;
+  /** When false, LibreChat uses a shared guest session (AUTH_MODE=open). */
+  authRequired?: boolean;
+  /** `open` = no login; `entra` = Microsoft Entra ID SSO */
+  authMode?: 'open' | 'entra';
   socialLogins?: string[];
   interface?: TInterfaceConfig;
   turnstile?: TTurnstileConfig;

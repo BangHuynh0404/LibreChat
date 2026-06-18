@@ -25,6 +25,7 @@ import {
   useLoginUserMutation,
   useLogoutUserMutation,
   useRefreshTokenMutation,
+  useGetStartupConfig,
 } from '~/data-provider';
 import { TAuthConfig, TUserContext, TAuthContext, TResError } from '~/common';
 import { SESSION_KEY, isSafeRedirect, getPostLoginRedirect } from '~/utils';
@@ -66,6 +67,9 @@ const AuthContextProvider = ({
   });
 
   const navigate = useNavigate();
+  const { data: startupConfig } = useGetStartupConfig();
+
+  const authRequired = startupConfig?.authRequired !== false;
 
   const setUserContext = useMemo(
     () =>
@@ -202,7 +206,7 @@ const AuthContextProvider = ({
           return;
         }
         console.log('Token is not present. User is not authenticated.');
-        if (authConfig?.test === true) {
+        if (authConfig?.test === true || !authRequired) {
           return;
         }
         navigate(buildLoginRedirectUrl());
@@ -212,14 +216,14 @@ const AuthContextProvider = ({
           return;
         }
         console.log('refreshToken mutation error:', error);
-        if (authConfig?.test === true) {
+        if (authConfig?.test === true || !authRequired) {
           return;
         }
         navigate(buildLoginRedirectUrl());
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deps are stable at mount; adding refreshToken causes infinite re-fire
-  }, []);
+  }, [authRequired]);
 
   useEffect(() => {
     if (isExternalRedirectRef.current) {
@@ -229,7 +233,9 @@ const AuthContextProvider = ({
       setUser(userQuery.data);
     } else if (userQuery.isError) {
       doSetError((userQuery.error as Error).message);
-      navigate(buildLoginRedirectUrl(), { replace: true });
+      if (authRequired) {
+        navigate(buildLoginRedirectUrl(), { replace: true });
+      }
     }
     if (error != null && error && isAuthenticated) {
       doSetError(undefined);
@@ -248,6 +254,7 @@ const AuthContextProvider = ({
     navigate,
     silentRefresh,
     setUserContext,
+    authRequired,
   ]);
 
   useEffect(() => {

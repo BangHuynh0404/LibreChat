@@ -50,6 +50,8 @@ const { getAppConfig } = require('./services/Config');
 const staticCache = require('./utils/staticCache');
 const noIndex = require('./middleware/noIndex');
 const routes = require('./routes');
+const { getAuthMode, isOpenAuthMode } = require('~/server/utils/authMode');
+const { ensureGuestUser } = require('~/server/services/GuestAuthService');
 
 const { PORT, HOST, ALLOW_SOCIAL_LOGIN, DISABLE_COMPRESSION, TRUST_PROXY } = process.env ?? {};
 
@@ -112,6 +114,13 @@ const startServer = async () => {
   }
 
   await runAsSystem(seedDatabase);
+  logger.info(`[auth] AUTH_MODE=${getAuthMode()}`);
+  if (isOpenAuthMode()) {
+    await runAsSystem(ensureGuestUser);
+    logger.info('[auth] Open access enabled — shared guest user ready');
+  } else {
+    logger.info('[auth] Entra ID authentication required');
+  }
   /* Recover stuck `status: 'pending'` records from a crash mid-render.
    * `runAsSystem` is required — `File` is tenant-isolated and strict
    * mode rejects unscoped queries. Lazy sweep in the preview endpoint
